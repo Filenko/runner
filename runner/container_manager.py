@@ -6,7 +6,7 @@ import asyncio
 class ContainerManager():
     def __init__(self):
         self.dirPath = os.path.dirname(os.path.realpath(__file__))
-        self.client = docker.from_env()
+        self.client = docker.DockerClient(base_url='unix://var/run/docker.sock')
         self.containers = asyncio.Queue()
 
     async def GetContainer(self):
