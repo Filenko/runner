@@ -23,4 +23,4 @@ sudo usermod -aG docker $USER
 
 sudo docker build -t runner .
 
-docker run -v /var/run/docker.sock:/var/run/docker.sock -p 50051:50051 -it runner
+sudo docker run -v /var/run/docker.sock:/var/run/docker.sock -p 50051:50051 -it runner
