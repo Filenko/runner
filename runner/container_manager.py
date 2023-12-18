@@ -17,7 +17,8 @@ class ContainerManager():
     def RunContainers(self, num = 10):
         if len(self.client.containers.list()) >= num:
             for container in self.client.containers.list():
-                self.containers.put_nowait(container)
+                if "hw" in container.image.attrs['RepoTags'][0]:
+                    self.containers.put_nowait(container)
         else:
             for i in range(num):
                 self.client.images.build(tag = "hw_py3", path = f"{self.dirPath}/docker_files/py3")
