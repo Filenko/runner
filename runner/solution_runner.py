@@ -12,7 +12,7 @@ class SolutionRunner():
         await self.loader.LoadProgram(program)
         await self.loader.LoadTest(test)
         res = await asyncio.to_thread(self.container.exec_run, f"python3 /home/runner/runner.py --prog-path /home/run/prog.py --test-path /home/run/test.in", user = "run")
-        return res.output.decode()
+        return res.output.decode()[:-1]
 
     async def RunSolution(self, solution: Solution):
         for test in solution.tests:

@@ -8,6 +8,7 @@ import psutil
 from .solution import Solution
 from .solution_runner import SolutionRunner
 from .container_manager import ContainerManager
+import datetime
 
 
 logger = logging.getLogger("my_logger")
@@ -21,7 +22,11 @@ class Runner(run_pb2_grpc.RunnerServicer):
             request: run_pb2.CodeWithTests,
             context: grpc.aio.ServicerContext,
     ) -> run_pb2.CheckResults:
-        solution = Solution(request.program_code.decode(), request.tests, request.id)
+
+        tests_with_ts = [s + "\nReceived at server at: " + str(datetime.datetime.now().timestamp()) for s in request.tests]
+
+        solution = Solution(request.program_code.decode(), tests_with_ts, request.id)
+        # print(solution.tests)
         print("QUEUE SIZE:", container_manager.containers.qsize())
         container = await container_manager.GetContainer()
         runner = SolutionRunner(container)
