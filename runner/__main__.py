@@ -1,8 +1,15 @@
 import asyncio
 from .server import serve
-from .loader import Loader
-from .container_manager import ContainerManager
 import click
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(message)s')
+
+logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+logging.getLogger('docker').setLevel(logging.CRITICAL)
+logging.getLogger('asyncio').setLevel(logging.CRITICAL)
+logging.getLogger('grpc').setLevel(logging.CRITICAL)
+
 
 @click.command()
 @click.option(
@@ -13,7 +20,6 @@ import click
 )
 def main(port):
     asyncio.run(serve(port))
-    print(55)
 
 if __name__ == "__main__":
     main()

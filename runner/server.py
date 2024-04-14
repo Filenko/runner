@@ -5,52 +5,45 @@ import runner.proto.run_pb2_grpc as run_pb2_grpc
 import asyncio
 import logging
 import psutil
-from .solution import Solution
+from .solution import Solution, NoSuchProgramExtensionError, getSolutionType
 from .solution_runner import SolutionRunner
-from .container_manager import ContainerManager
-import datetime
+from .container_manager import ContainerManager, maxContainersForSolutionType
+import signal
 
-
-logger = logging.getLogger("my_logger")
-logging.basicConfig(level=logging.INFO, format="%(message)s")
-
-
+logger = logging.getLogger("server")
 
 class Runner(run_pb2_grpc.RunnerServicer):
+
     async def CheckProgram(
             self,
             request: run_pb2.CodeWithTests,
             context: grpc.aio.ServicerContext,
     ) -> run_pb2.CheckResults:
 
-        tests_with_ts = [s + "\nReceived at server at: " + str(datetime.datetime.now().timestamp()) for s in request.tests]
+        try:
+            solutionType = getSolutionType(request.filename)
+        except NoSuchProgramExtensionError:
+            logger.debug(f"Get solution: {request.id} with unknown type")
+            return run_pb2.CheckResults(status="No such program extension!")
 
-        solution = Solution(request.program_code.decode(), tests_with_ts, request.id)
-        # print(solution.tests)
-        print("QUEUE SIZE:", container_manager.containers.qsize())
-        container = await container_manager.GetContainer()
-        runner = SolutionRunner(container)
+        logger.debug(f"Get solution: {request.id} with type {solutionType.name}")
+
+        solution = Solution(request.program_code.decode(), request.tests, request.id, solutionType)
+        container = await container_manager.GetContainer(solutionType)
+        logger.debug(f"Containers queue size for type {solutionType.name} is {container_manager.containers[solutionType].qsize()} with max {maxContainersForSolutionType[solutionType]}")
+        runner = SolutionRunner(container, solutionType)
         await runner.RunSolution(solution=solution)
-        await container_manager.PutContainer(container)
-        load_info = run_pb2.LoadInfo(free_containers=container_manager.containers.qsize(), cpu_load=int(psutil.cpu_percent()))
-        return run_pb2.CheckResults(id = solution.id, result = runner.results, load_info=load_info)
+        await container_manager.PutContainer(container, solutionType)
+        load_info = run_pb2.LoadInfo(free_containers=container_manager.containers[solutionType].qsize(), cpu_load=int(psutil.cpu_percent()))
+        return run_pb2.CheckResults(id = solution.id, result = runner.results, load_info=load_info, status="OK!")
 
 async def serve(port) -> None:
     global container_manager
-    container_manager = ContainerManager()
-    container_manager.RunContainers(10)
-    # server = grpc.aio.server()
-    # run_pb2_grpc.add_RunnerServicer_to_server(Runner(), server)
-    # listen_addr = "[::]:5050"
-    # server.add_insecure_port(listen_addr)
-    # logging.info("Starting server on %s", listen_addr)
-    # await server.start()
-    # await server.wait_for_termination()
+    container_manager = await ContainerManager().init()
 
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
     run_pb2_grpc.add_RunnerServicer_to_server(Runner(), server)
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
+    logger.debug(f"Server started at port {port}")
     await server.wait_for_termination()
-
-

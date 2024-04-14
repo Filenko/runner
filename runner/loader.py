@@ -4,38 +4,43 @@ import tempfile
 import tarfile
 import subprocess
 import asyncio
+from io import BytesIO
+import docker
+from .solution import SolutionType, solutionTypeToExtension
+
 
 class Loader():
-    def __init__(self, container):
+    def __init__(self, container, solutionType : SolutionType):
         self.path = "/home/run"
         self.container = container
+        self.solutionType = solutionType
 
-    async def SaveStringAsFileToContainer(self, inputString, fileName):
-        tmpFile = tempfile.NamedTemporaryFile()
-        with open (tmpFile.name, "w") as f:
-            f.write(inputString)
-        os.chdir(os.path.dirname(tmpFile.name))
-        srcname = os.path.basename(tmpFile.name)
-        tar = tarfile.open(tmpFile.name + '.tar', mode='w')
-        try:
-            tar.add(srcname)
-        finally:
-            tar.close()
-        data = open(tmpFile.name + '.tar', 'rb').read()
-        self.container.put_archive("/home/run/", data)
-        tmpFileName = tmpFile.name.split("/")[-1]
-        await asyncio.to_thread(self.container.exec_run, f"mv /home/run/{tmpFileName} /home/run/{fileName}", user = "root")
+    async def SaveStringsAsFilesToContainer(self, files):
+        def create_tar_archive():
+            tarData = BytesIO()
+            with tarfile.open(fileobj=tarData, mode="w") as tar:
+                for file_name, file_content in files.items():
+                    fileData = BytesIO(file_content.encode('utf-8'))
+                    tarInfo = tarfile.TarInfo(name=file_name)
+                    tarInfo.size = len(fileData.getbuffer())
+                    tar.addfile(tarinfo=tarInfo, fileobj=fileData)
+            tarData.seek(0)
+            return tarData.getvalue()
+
+        tarDataValue = await asyncio.to_thread(create_tar_archive)
+
+
+        await asyncio.to_thread(self.container.put_archive, "/home/run/", tarDataValue)
         await asyncio.to_thread(self.container.exec_run, f"chown -R run:run /home/run", user = "root")
-        os.remove(tmpFile.name + '.tar')
-        tmpFile.close()
-        return tmpFileName
 
-    async def LoadTest(self, test):
-        await self.SaveStringAsFileToContainer(test, "test.in")
-    async def LoadProgram(self, program):
-        await self.SaveStringAsFileToContainer(program, "prog.py")
+    async def LoadProgramWithTest(self, program, test):
+        files = {
+            f"prog.{solutionTypeToExtension[self.solutionType]}": program,
+            "test.in": test
+        }
+        await self.SaveStringsAsFilesToContainer(files)
 
     async def ClearRunningDirectory(self):
         await asyncio.to_thread(self.container.exec_run, f"rm -rf /home/run/*", user = "root")
-        await asyncio.to_thread(self.container.exec_run, f"rm -rf /tmp/*", user = "root")
-        await asyncio.to_thread(self.container.exec_run, f"rm -rf /var/tmp/*", user = "root")
+        # await asyncio.to_thread(self.container.exec_run, f"rm -rf /tmp/*", user = "root")
+        # await asyncio.to_thread(self.container.exec_run, f"rm -rf /var/tmp/*", user = "root")

@@ -4,6 +4,7 @@ import click
 import time
 import psutil
 import enum
+import json
 
 class StatusCode(enum.Enum):
     OK = 1,
@@ -36,10 +37,6 @@ def RunProgram(progPath, testPath, time_limit = 100, memory_limit = 1024 * 1024 
             print("Процесс завершился")
 
         output = process.stdout.read()
-        print(output, sep = "")
-
-        # with open("result", "w", encoding="utf-8") as r:
-        #     r.write(output)
 
         return StatusCode.OK, output
 
@@ -56,9 +53,12 @@ def RunProgram(progPath, testPath, time_limit = 100, memory_limit = 1024 * 1024 
     required = True
 )
 def main (prog_path, test_path):
-    a = RunProgram(progPath=prog_path, testPath=test_path)
-    # print(a)
-    return a
+    result = RunProgram(prog_path, test_path)
+    result = {
+        'status': result[0].name,
+        'result': result[1]
+    }
+    print(json.dumps(result), sep = "")
 
 if __name__ == "__main__":
     main()
