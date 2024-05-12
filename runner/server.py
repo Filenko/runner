@@ -34,7 +34,7 @@ class Runner(run_pb2_grpc.RunnerServicer):
         runner = SolutionRunner(container, solutionType)
         await runner.RunSolution(solution=solution)
         await container_manager.PutContainer(container, solutionType)
-        load_info = run_pb2.LoadInfo(free_containers=container_manager.containers[solutionType].qsize(), cpu_load=int(psutil.cpu_percent()))
+        load_info = run_pb2.LoadInfo(free_containers=container_manager.containers[solutionType].qsize(), cpu_load=int(psutil.cpu_percent()), solution_type=solutionType.value)
         return run_pb2.CheckResults(id = solution.id, result = runner.results, load_info=load_info, status="OK!")
 
 async def serve(port) -> None:

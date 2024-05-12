@@ -26,7 +26,7 @@ def getSolutionType (filename) -> SolutionType:
     if fileExtension in extensionToSolutionType:
         return extensionToSolutionType[fileExtension]
     else:
-        raise NoSuchProgramExtensionError
+        raise NoSuchProgramExtensionError("No such program type!")
 
 class Solution():
     def __init__(self, programCode, tests, id, solutionType):

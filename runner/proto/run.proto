@@ -8,7 +8,8 @@ service Runner {
 
 message LoadInfo {
   uint64 free_containers = 1;
-  uint64 cpu_load = 2;
+  uint64 solution_type = 2;
+  uint64 cpu_load = 3;
 }
 
 message CodeWithTests {
