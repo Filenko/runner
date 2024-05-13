@@ -13,7 +13,14 @@ maxContainersForSolutionType = {
 }
 
 class ContainerManager():
-    async def init(self):
+    async def init(self, python_containers, c_containers, cpp_containers):
+
+        if python_containers:
+            maxContainersForSolutionType[SolutionType.py3] = python_containers
+        if c_containers:
+            maxContainersForSolutionType[SolutionType.c] = c_containers
+        if cpp_containers:
+            maxContainersForSolutionType[SolutionType.cpp] = cpp_containers
         self.dirPath = os.path.dirname(os.path.realpath(__file__))
         self.client = docker.DockerClient(base_url='unix://var/run/docker.sock')
         await self.BuildAllImages()

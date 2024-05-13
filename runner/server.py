@@ -37,9 +37,9 @@ class Runner(run_pb2_grpc.RunnerServicer):
         load_info = run_pb2.LoadInfo(free_containers=container_manager.containers[solutionType].qsize(), cpu_load=int(psutil.cpu_percent()), solution_type=solutionType.value)
         return run_pb2.CheckResults(id = solution.id, result = runner.results, load_info=load_info, status="OK!")
 
-async def serve(port) -> None:
+async def serve(port, python_containers, c_containers, cpp_containers) -> None:
     global container_manager
-    container_manager = await ContainerManager().init()
+    container_manager = await ContainerManager().init(python_containers, c_containers, cpp_containers)
 
     server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
     run_pb2_grpc.add_RunnerServicer_to_server(Runner(), server)
